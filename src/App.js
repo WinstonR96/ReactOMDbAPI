@@ -1,8 +1,9 @@
-import React, { Component } from 'react';
-import './App.css';
+import React, { Component } from "react";
+import "./App.css";
 import SearchBar from "./Components/SearchBar/SearchBar";
 import MovieList from "./Components/MovieList/MovieList";
-import axios from "axios";
+import MovieService from "./Services/MovieService";
+import { Container, Grid } from "semantic-ui-react";
 
 class App extends Component {
   constructor(props) {
@@ -11,53 +12,85 @@ class App extends Component {
     this.state = {
       movies: [],
       results: [],
-      resultSeleted: []
+      resultSeleted: [],
+      showMovie: false
     };
-
-    this.movieSearch = this.movieSearch.bind(this);
-    this.SelectedResult = this.SelectedResult.bind(this);
   }
 
-  componentDidMount() {
-    axios.get('http://www.omdbapi.com/?i=tt3896198&apikey=5eec5adc&s=scary')
-      .then((response) => {
-        const { Search } = response.data;
-        this.setState({ movies: Search });
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-  }
+  componentDidMount = () => {
+    const params = `?i=${window.config.IMBDID}&apikey=${window.config.API_KEY}`;
+    this.getMovie(params);
+  };
+
+  //Funcion que me permite cargar una pelicula inicial para mostrar
+  getMovie = params => {
+    MovieService.get(params)
+      .then(movie =>
+        this.setState({
+          movies: movie
+        })
+      )
+      .catch(err => console.log("Ocurrio un error: ", err));
+  };
 
   render() {
-    const { movies } = this.state;
     return (
       <div className="App">
-        {/* Componente de barra de busqueda */}
-        <SearchBar
-          onSearchMovie={title => this.movieSearch(title)}
-          results={this.state.results}
-          onSelectedResult={movie => this.SelectedResult(movie)}
-        />
-        {/* Componente de listado */}
-        {!movies ? <span>Cargando....</span> : <MovieList movies={this.state.movies} />}
+        <Container textAlign="center">
+          <Grid columns="equal">
+            <Grid.Row>
+              <Grid.Column></Grid.Column>
+              <Grid.Column width={8}>
+                {/* Componente de barra de busqueda */}
+                <SearchBar
+                  onSearchMovie={title => this.movieSearch(title)}
+                  results={this.state.results}
+                  onSelectedResult={movie => this.SelectedResult(movie)}
+                />
+              </Grid.Column>
+              <Grid.Column></Grid.Column>
+            </Grid.Row>
+            <Grid.Row>
+              <Grid.Column></Grid.Column>
+              <Grid.Column width={8}>
+                <center>
+                  {/* Componente de listado */}
+                  {this.state.showMovie ? (
+                    <MovieList movies={this.state.resultSeleted} />
+                  ) : (
+                    <MovieList movies={this.state.movies} />
+                  )}
+                </center>
+              </Grid.Column>
+              <Grid.Column></Grid.Column>
+            </Grid.Row>
+          </Grid>
+        </Container>
       </div>
     );
   }
 
-  movieSearch(title) {
-    const endPoint = `${window.config.ENDPOINT}?i=${window.config.IMBDID}&apikey=${window.config.API_KEY}&s=${title}`;
-    axios
-      .get(endPoint)
+  //Funcion que se encarga de buscar la pelicula especificada
+  //Esta funcion es pasada al componente SearchBar, para que sea
+  //Ejecutada desde dicho componente
+  movieSearch = title => {
+    const params = `?i=${window.config.IMBDID}&apikey=${window.config.API_KEY}&s=${title}`;
+    MovieService.get(params)
       .then(response => {
-        this.setState({ results: response.data.Search });
+        this.setState({ results: response.Search });
       })
-      .catch(error => console.log(error));
-  }
+      .catch(error => console.log("Ocurrio un error: ", error));
+  };
 
-  SelectedResult(movie) {
-    this.setState({ resultSeleted: movie });
-  }
+  //Funcion que selecciona la pelicula del listado de peliculas encontradas
+  //Esta funcion es pasada al componente SearchBar, para que sea
+  //Ejecutada desde dicho componente
+  SelectedResult = movie => {
+    this.setState({
+      showMovie: true,
+      resultSeleted: movie
+    });
+  };
 }
 
 export default App;
